@@ -15,27 +15,29 @@
 package dao
 
 import (
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/suite"
+
 	"github.com/goharbor/harbor/src/lib/errors"
 	"github.com/goharbor/harbor/src/lib/q"
 	"github.com/goharbor/harbor/src/pkg/blob/models"
 	htesting "github.com/goharbor/harbor/src/testing"
-	"github.com/stretchr/testify/suite"
-	"testing"
-	"time"
 )
 
-type DaoTestSuite struct {
+type MysqlDaoTestSuite struct {
 	htesting.Suite
 	dao DAO
 }
 
-func (suite *DaoTestSuite) SetupSuite() {
+func (suite *MysqlDaoTestSuite) SetupSuite() {
 	suite.Suite.SetupSuite()
-	suite.Suite.ClearTables = []string{`blob`, "artifact_blob", "project_blob"}
-	suite.dao = New()
+	suite.Suite.ClearTables = []string{"blob", "artifact_blob", "project_blob"}
+	suite.dao = NewMysqlDao()
 }
 
-func (suite *DaoTestSuite) TestCreateArtifactAndBlob() {
+func (suite *MysqlDaoTestSuite) TestCreateArtifactAndBlob() {
 	ctx := suite.Context()
 
 	artifactDigest := suite.DigestString()
@@ -48,7 +50,7 @@ func (suite *DaoTestSuite) TestCreateArtifactAndBlob() {
 	suite.Nil(err)
 }
 
-func (suite *DaoTestSuite) TestGetArtifactAndBlob() {
+func (suite *MysqlDaoTestSuite) TestGetArtifactAndBlob() {
 	ctx := suite.Context()
 
 	artifactDigest := suite.DigestString()
@@ -68,7 +70,7 @@ func (suite *DaoTestSuite) TestGetArtifactAndBlob() {
 	}
 }
 
-func (suite *DaoTestSuite) TestDeleteArtifactAndBlobByArtifact() {
+func (suite *MysqlDaoTestSuite) TestDeleteArtifactAndBlobByArtifact() {
 	ctx := suite.Context()
 
 	artifactDigest := suite.DigestString()
@@ -92,11 +94,11 @@ func (suite *DaoTestSuite) TestDeleteArtifactAndBlobByArtifact() {
 	suite.Len(digests, 0)
 }
 
-func (suite *DaoTestSuite) TestGetAssociatedBlobDigestsForArtifact() {
+func (suite *MysqlDaoTestSuite) TestGetAssociatedBlobDigestsForArtifact() {
 
 }
 
-func (suite *DaoTestSuite) TestCreateBlob() {
+func (suite *MysqlDaoTestSuite) TestCreateBlob() {
 	ctx := suite.Context()
 
 	digest := suite.DigestString()
@@ -108,7 +110,7 @@ func (suite *DaoTestSuite) TestCreateBlob() {
 	suite.Nil(err)
 }
 
-func (suite *DaoTestSuite) TestGetBlobByDigest() {
+func (suite *MysqlDaoTestSuite) TestGetBlobByDigest() {
 	ctx := suite.Context()
 
 	digest := suite.DigestString()
@@ -126,7 +128,7 @@ func (suite *DaoTestSuite) TestGetBlobByDigest() {
 	}
 }
 
-func (suite *DaoTestSuite) TestUpdateBlob() {
+func (suite *MysqlDaoTestSuite) TestUpdateBlob() {
 	ctx := suite.Context()
 
 	digest := suite.DigestString()
@@ -155,7 +157,7 @@ func (suite *DaoTestSuite) TestUpdateBlob() {
 	}
 }
 
-func (suite *DaoTestSuite) TestUpdateBlobStatus() {
+func (suite *MysqlDaoTestSuite) TestUpdateBlobStatus() {
 	ctx := suite.Context()
 
 	digest := suite.DigestString()
@@ -194,7 +196,7 @@ func (suite *DaoTestSuite) TestUpdateBlobStatus() {
 	}
 }
 
-func (suite *DaoTestSuite) TestListBlobs() {
+func (suite *MysqlDaoTestSuite) TestListBlobs() {
 	ctx := suite.Context()
 
 	digest1 := suite.DigestString()
@@ -241,11 +243,11 @@ func (suite *DaoTestSuite) TestListBlobs() {
 
 }
 
-func (suite *DaoTestSuite) TestListBlobsAssociatedWithArtifact() {
+func (suite *MysqlDaoTestSuite) TestListBlobsAssociatedWithArtifact() {
 
 }
 
-func (suite *DaoTestSuite) TestSumBlobsSize() {
+func (suite *MysqlDaoTestSuite) TestSumBlobsSize() {
 	ctx := suite.Context()
 
 	size1, err := suite.dao.SumBlobsSize(ctx, true)
@@ -260,14 +262,14 @@ func (suite *DaoTestSuite) TestSumBlobsSize() {
 	suite.Equal(int64(999), size2-size1)
 }
 
-func (suite *DaoTestSuite) TestFindBlobsShouldUnassociatedWithProject() {
+func (suite *MysqlDaoTestSuite) TestFindBlobsShouldUnassociatedWithProject() {
 	ctx := suite.Context()
 
 	suite.WithProject(func(projectID int64, projectName string) {
 		artifact1 := suite.DigestString()
 		artifact2 := suite.DigestString()
 
-		sql := `INSERT INTO artifact ("type", media_type, manifest_media_type, digest, project_id, repository_id, repository_name) VALUES ('image', 'media_type', 'manifest_media_type', ?, ?, ?, 'library/hello-world')`
+		sql := "INSERT INTO artifact (`type`, media_type, manifest_media_type, digest, project_id, repository_id, repository_name) VALUES ('image', 'media_type', 'manifest_media_type', ?, ?, ?, 'library/hello-world')"
 		suite.ExecSQL(sql, artifact1, projectID, 10)
 		suite.ExecSQL(sql, artifact2, projectID, 10)
 
@@ -322,7 +324,7 @@ func (suite *DaoTestSuite) TestFindBlobsShouldUnassociatedWithProject() {
 
 }
 
-func (suite *DaoTestSuite) TestCreateProjectBlob() {
+func (suite *MysqlDaoTestSuite) TestCreateProjectBlob() {
 	ctx := suite.Context()
 
 	projectID := int64(1)
@@ -335,7 +337,7 @@ func (suite *DaoTestSuite) TestCreateProjectBlob() {
 	suite.Nil(err)
 }
 
-func (suite *DaoTestSuite) TestExistProjectBlob() {
+func (suite *MysqlDaoTestSuite) TestExistProjectBlob() {
 	ctx := suite.Context()
 
 	digest := suite.DigestString()
@@ -357,7 +359,7 @@ func (suite *DaoTestSuite) TestExistProjectBlob() {
 	suite.True(exist)
 }
 
-func (suite *DaoTestSuite) TestDeleteProjectBlob() {
+func (suite *MysqlDaoTestSuite) TestDeleteProjectBlob() {
 	ctx := suite.Context()
 
 	digest := suite.DigestString()
@@ -415,7 +417,7 @@ func (suite *DaoTestSuite) TestDeleteProjectBlob() {
 	}
 }
 
-func (suite *DaoTestSuite) TestDelete() {
+func (suite *MysqlDaoTestSuite) TestDelete() {
 	ctx := suite.Context()
 
 	err := suite.dao.DeleteBlob(ctx, 100021)
@@ -429,7 +431,7 @@ func (suite *DaoTestSuite) TestDelete() {
 	suite.Require().Nil(err)
 }
 
-func (suite *DaoTestSuite) TestGetBlobsNotRefedByProjectBlob() {
+func (suite *MysqlDaoTestSuite) TestGetBlobsNotRefedByProjectBlob() {
 	ctx := suite.Context()
 
 	blobs, err := suite.dao.GetBlobsNotRefedByProjectBlob(ctx, 0)
@@ -457,7 +459,7 @@ func (suite *DaoTestSuite) TestGetBlobsNotRefedByProjectBlob() {
 	suite.Require().Equal(0, len(blobs))
 }
 
-func (suite *DaoTestSuite) GetBlobsByArtDigest() {
+func (suite *MysqlDaoTestSuite) GetBlobsByArtDigest() {
 	ctx := suite.Context()
 	afDigest := suite.DigestString()
 	blobs, err := suite.dao.GetBlobsByArtDigest(ctx, afDigest)
@@ -482,6 +484,6 @@ func (suite *DaoTestSuite) GetBlobsByArtDigest() {
 	suite.Require().Equal(3, len(blobs))
 }
 
-func TestDaoTestSuite(t *testing.T) {
-	suite.Run(t, &DaoTestSuite{})
+func TestMysqlDaoTestSuite(t *testing.T) {
+	suite.Run(t, &MysqlDaoTestSuite{})
 }

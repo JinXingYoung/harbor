@@ -97,13 +97,15 @@ const password string = "Abc12345"
 const projectName string = "test_project"
 
 func TestMain(m *testing.M) {
-	databases := []string{"postgresql"}
+	databases := []string{"postgresql", "mysql", "mariadb"}
 	for _, database := range databases {
 		log.Infof("run test cases for database: %s", database)
 		result := 1
 		switch database {
 		case "postgresql":
 			PrepareTestForPostgresSQL()
+		case "mysql", "mariadb":
+			PrepareTestForMySQL()
 		default:
 			log.Fatalf("invalid database: %s", database)
 		}

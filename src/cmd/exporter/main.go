@@ -20,19 +20,7 @@ func main() {
 	viper.SetEnvPrefix("harbor")
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	dbCfg := &models.Database{
-		Type: "postgresql",
-		PostGreSQL: &models.PostGreSQL{
-			Host:         viper.GetString("database.host"),
-			Port:         viper.GetInt("database.port"),
-			Username:     viper.GetString("database.username"),
-			Password:     viper.GetString("database.password"),
-			Database:     viper.GetString("database.dbname"),
-			SSLMode:      viper.GetString("database.sslmode"),
-			MaxIdleConns: viper.GetInt("database.max_idle_conns"),
-			MaxOpenConns: viper.GetInt("database.max_open_conns"),
-		},
-	}
+	dbCfg := Database()
 	if err := dao.InitDatabase(dbCfg); err != nil {
 		log.Fatalf("failed to initialize database: %v", err)
 	}
@@ -80,4 +68,42 @@ func main() {
 		log.Errorf("Error starting Harbor expoter %s", err)
 		os.Exit(1)
 	}
+}
+
+// Database returns database settings
+func Database() *models.Database {
+	databaseType := viper.GetString("database.type")
+
+	switch databaseType {
+	case "", "postgresql":
+		return &models.Database{
+			Type: databaseType,
+			PostGreSQL: &models.PostGreSQL{
+				Host:         viper.GetString("database.host"),
+				Port:         viper.GetInt("database.port"),
+				Username:     viper.GetString("database.username"),
+				Password:     viper.GetString("database.password"),
+				Database:     viper.GetString("database.dbname"),
+				SSLMode:      viper.GetString("database.sslmode"),
+				MaxIdleConns: viper.GetInt("database.max_idle_conns"),
+				MaxOpenConns: viper.GetInt("database.max_open_conns"),
+			},
+		}
+	case "mariadb", "mysql":
+		return &models.Database{
+			Type: databaseType,
+			MySQL: &models.MySQL{
+				Host:         viper.GetString("database.host"),
+				Port:         viper.GetInt("database.port"),
+				Username:     viper.GetString("database.username"),
+				Password:     viper.GetString("database.password"),
+				Database:     viper.GetString("database.dbname"),
+				UseSSL:       viper.GetBool("database.usessl"),
+				MaxIdleConns: viper.GetInt("database.max_idle_conns"),
+				MaxOpenConns: viper.GetInt("database.max_open_conns"),
+			},
+		}
+	}
+
+	return nil
 }

@@ -34,7 +34,8 @@ CREATE TABLE scan_report
     report JSON,
     start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     end_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(digest, registration_uuid, mime_type)
+    UNIQUE(digest, registration_uuid, mime_type),
+    CHECK (report is null or JSON_VALID (report))
 );
 
 /** Add table for immutable tag  **/

@@ -1,4 +1,4 @@
-ALTER TABLE project ADD COLUMN registry_id int;
+ALTER TABLE project ADD COLUMN IF NOT EXISTS registry_id int;
 ALTER TABLE cve_whitelist RENAME TO cve_allowlist;
 UPDATE role SET name='maintainer' WHERE name='master';
 UPDATE project_metadata SET name='reuse_sys_cve_allowlist' WHERE name='reuse_sys_cve_whitelist';
@@ -14,7 +14,8 @@ CREATE TABLE IF NOT EXISTS execution (
     start_time timestamp DEFAULT CURRENT_TIMESTAMP,
     end_time timestamp,
     revision int,
-    PRIMARY KEY (id)
+    PRIMARY KEY (id),
+    CHECK (extra_attrs is null or JSON_VALID (extra_attrs))
 );
 
 CREATE TABLE IF NOT EXISTS task (
@@ -31,16 +32,17 @@ CREATE TABLE IF NOT EXISTS task (
     start_time timestamp,
     update_time timestamp,
     end_time timestamp,
-    FOREIGN KEY (execution_id) REFERENCES execution(id)
+    FOREIGN KEY (execution_id) REFERENCES execution(id),
+    CHECK (extra_attrs is null or JSON_VALID (extra_attrs))
 );
 
 ALTER TABLE `blob` ADD COLUMN update_time timestamp default CURRENT_TIMESTAMP;
 ALTER TABLE `blob` ADD COLUMN status varchar(255) default 'none';
 ALTER TABLE `blob` ADD COLUMN version BIGINT default 0;
-CREATE INDEX idx_status ON `blob` (status);
-CREATE INDEX idx_version ON `blob` (version);
+CREATE INDEX IF NOT EXISTS idx_status ON `blob` (status);
+CREATE INDEX IF NOT EXISTS idx_version ON `blob` (version);
 
-CREATE TABLE p2p_preheat_instance (
+CREATE TABLE IF NOT EXISTS p2p_preheat_instance (
   id          SERIAL PRIMARY KEY NOT NULL,
   name        varchar(255) NOT NULL,
   description varchar(255),
@@ -77,13 +79,19 @@ ALTER TABLE schedule ADD COLUMN callback_func_param text;
 
 /*abstract the cron, callback function parameters from table retention_policy*/
 UPDATE schedule, (
-    SELECT id, data->>'$.trigger.references.job_id' AS schedule_id,
-        data->>'$.trigger.settings.cron' AS cron
+    SELECT id, replace(json_extract(data,'$.trigger.references.job_id'),'"','') AS schedule_id,
+        replace(json_extract(data,'$.trigger.settings.cron'),'"','') AS cron
         FROM retention_policy
     ) AS retention
 SET vendor_type= 'RETENTION', vendor_id=retention.id, schedule.cron = retention.cron,
     callback_func_name = 'RETENTION', callback_func_param=concat('{"PolicyID":', retention.id, ',"Trigger":"Schedule"}')
 WHERE schedule.id=retention.schedule_id;
+
+ALTER TABLE schedule ADD COLUMN IF NOT EXISTS vendor_type varchar(16);
+ALTER TABLE schedule ADD COLUMN IF NOT EXISTS vendor_id int;
+ALTER TABLE schedule ADD COLUMN IF NOT EXISTS cron varchar(64);
+ALTER TABLE schedule ADD COLUMN IF NOT EXISTS callback_func_name varchar(128);
+ALTER TABLE schedule ADD COLUMN IF NOT EXISTS callback_func_param text;
 
 /*create new execution and task record for each schedule*/
 CREATE PROCEDURE PROC_UPDATE_EXECUTION_TASK ( ) BEGIN
@@ -120,13 +128,13 @@ END;
 
 CALL PROC_UPDATE_EXECUTION_TASK();
 
-ALTER TABLE schedule DROP COLUMN job_id;
-ALTER TABLE schedule DROP COLUMN status;
+ALTER TABLE schedule DROP COLUMN IF EXISTS job_id;
+ALTER TABLE schedule DROP COLUMN IF EXISTS status;
 
 UPDATE registry SET type = 'quay' WHERE type = 'quay-io';
 
 
-ALTER TABLE artifact ADD COLUMN icon varchar(255);
+ALTER TABLE artifact ADD COLUMN IF NOT EXISTS icon varchar(255);
 
 /*remove the constraint for name in table 'notification_policy'*/
 /*ALTER TABLE notification_policy DROP CONSTRAINT notification_policy_name_key;*/
@@ -146,7 +154,7 @@ INSERT INTO data_migrations (version) VALUES (
         ELSE 0
     END
 );
-ALTER TABLE schema_migrations DROP COLUMN data_version;
+ALTER TABLE schema_migrations DROP COLUMN IF EXISTS data_version;
 
 UPDATE artifact
 SET icon=(

@@ -24,6 +24,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"sync"
 	"time"
 
@@ -54,7 +55,16 @@ type Suite struct {
 func (suite *Suite) SetupSuite() {
 	once.Do(func() {
 		config.Init()
-		dao.PrepareTestForPostgresSQL()
+		dbType := os.Getenv("DATABASE_TYPE")
+
+		switch dbType {
+		case "postgresql":
+			dao.PrepareTestForPostgresSQL()
+		case "mysql", "mariadb":
+			dao.PrepareTestForMySQL()
+		default:
+			dao.PrepareTestForPostgresSQL()
+		}
 	})
 }
 

@@ -263,7 +263,7 @@ DROP TABLE IF EXISTS replication_execution;
 INSERT INTO `schedule` ( vendor_type, vendor_id, cron, callback_func_name, callback_func_param, creation_time, update_time ) SELECT
 'REPLICATION',
 schd.policy_id,
-( SELECT `trigger` ->> '$.trigger_settings.cron' FROM replication_policy WHERE id = schd.policy_id ),
+( SELECT replace(json_extract(`trigger`,'$.trigger_settings.cron'),'"','') FROM replication_policy WHERE id = schd.policy_id ),
 'REPLICATION_CALLBACK',
 schd.policy_id,
 schd.creation_time,
@@ -376,11 +376,11 @@ ALTER TABLE schedule ADD CONSTRAINT unique_schedule UNIQUE (vendor_type, vendor_
 INSERT INTO `schedule` ( vendor_type, vendor_id, cron, callback_func_name, callback_func_param, cron_type, extra_attrs, creation_time, update_time ) SELECT
 'GARBAGE_COLLECTION',
 - 1,
-schd.cron_str ->> '$.cron',
+replace(json_extract(schd.cron_str,'$.cron'),'"',''),
 'GARBAGE_COLLECTION',
-( SELECT JSON_OBJECT ( 'trigger', NULL, 'deleteuntagged', schd.job_parameters -> '$.delete_untagged', 'dryrun', FALSE, 'extra_attrs', schd.job_parameters ) ),
-schd.cron_str ->> '$.type',
-( SELECT JSON_OBJECT ( 'delete_untagged', schd.job_parameters -> '$.delete_untagged' ) ),
+( SELECT JSON_OBJECT ( 'trigger', NULL, 'deleteuntagged', json_extract(schd.job_parameters,'$.delete_untagged'), 'dryrun', FALSE, 'extra_attrs', schd.job_parameters ) ),
+replace(json_extract(schd.cron_str,'$.type'),'"',''),
+( SELECT JSON_OBJECT ( 'delete_untagged', json_extract(schd.job_parameters,'$.delete_untagged') ) ),
 schd.creation_time,
 schd.update_time
 FROM
@@ -399,9 +399,9 @@ INSERT INTO execution ( vendor_type, vendor_id, STATUS, revision, `trigger`, sta
 	WHERE
 		vendor_type = 'GARBAGE_COLLECTION'
 		AND vendor_id =- 1
-		AND cron = schd.cron_str ->> '$.cron'
+		AND cron = replace(json_extract(schd.cron_str,'$.cron'),'"','')
 		AND callback_func_name = 'GARBAGE_COLLECTION'
-		AND cron_type = schd.cron_str ->> '$.type'
+		AND cron_type = replace(json_extract(schd.cron_str,'$.type'),'"','')
 		AND creation_time = schd.creation_time
 		AND update_time = schd.update_time
 	),
@@ -447,9 +447,9 @@ INSERT INTO task ( vendor_type, execution_id, job_id, STATUS, status_code, statu
 		WHERE
 			vendor_type = 'GARBAGE_COLLECTION'
 			AND vendor_id =- 1
-			AND cron = schd.cron_str ->> '$.cron'
+			AND cron = replace(json_extract(schd.cron_str,'$.cron'),'"','')
 			AND callback_func_name = 'GARBAGE_COLLECTION'
-			AND cron_type = schd.cron_str ->> '$.type'
+			AND cron_type = replace(json_extract(schd.cron_str,'$.type'),'"','')
 			AND creation_time = schd.creation_time
 			AND update_time = schd.creation_time
 		)
@@ -579,7 +579,7 @@ CASE
 	END,
 	0,
 	1,
-	cast( aj.job_parameters AS json ),
+	aj.job_parameters,
 	aj.creation_time,
 	aj.creation_time,
 	aj.update_time,
@@ -595,9 +595,9 @@ WHERE
 INSERT INTO `schedule` ( vendor_type, vendor_id, cron, callback_func_name, cron_type, creation_time, update_time ) SELECT
 'SCAN_ALL',
 0,
-schd.cron_str ->> 'cron',
+replace(json_extract(schd.cron_str,'cron'),'"',''),
 'scanAll',
-schd.cron_str ->> 'type',
+replace(json_extract(schd.cron_str,'type'),'"',''),
 schd.creation_time,
 schd.update_time
 FROM
@@ -616,9 +616,9 @@ INSERT INTO execution ( vendor_type, vendor_id, STATUS, revision, `trigger`, sta
 	WHERE
 		vendor_type = 'SCAN_ALL'
 		AND vendor_id =0
-		AND cron = schd.cron_str ->> '$.cron'
+		AND cron = replace(json_extract(schd.cron_str,'$.cron'),'"','')
 		AND callback_func_name = 'scanAll'
-		AND cron_type = schd.cron_str ->> '$.type'
+		AND cron_type = replace(json_extract(schd.cron_str,'$.type'),'"','')
 		AND creation_time = schd.creation_time
 		AND update_time = schd.update_time
 	),
@@ -664,9 +664,9 @@ INSERT INTO task ( vendor_type, execution_id, job_id, STATUS, status_code, statu
 		WHERE
 		vendor_type = 'SCAN_ALL'
 		AND vendor_id =0
-		AND cron = schd.cron_str ->> '$.cron'
+		AND cron = replace(json_extract(schd.cron_str,'$.cron'),'"','')
 		AND callback_func_name = 'scanAll'
-		AND cron_type = schd.cron_str ->> '$.type'
+		AND cron_type = replace(json_extract(schd.cron_str,'$.type'),'"','')
 		AND creation_time = schd.creation_time
 		AND update_time = schd.update_time
 		)
@@ -755,7 +755,8 @@ CREATE TABLE IF NOT EXISTS vulnerability_record (
     cwe_ids text,
     vendor_attributes json,
     UNIQUE (cve_id(64), registration_uuid, package(64), package_version(64)),
-    CONSTRAINT fk_registration_uuid FOREIGN  KEY(registration_uuid) REFERENCES scanner_registration(uuid) ON DELETE CASCADE
+    CONSTRAINT fk_registration_uuid FOREIGN  KEY(registration_uuid) REFERENCES scanner_registration(uuid) ON DELETE CASCADE,
+    CHECK (vendor_attributes is null or JSON_VALID (vendor_attributes))
 );
 
 -- --------------------------------------------------
@@ -782,7 +783,7 @@ DELETE rt FROM retention_task AS rt LEFT JOIN retention_execution re ON rt.execu
 WHERE re.id IS NULL;
 
 /*move the replication execution records into the new execution table*/
-ALTER TABLE retention_execution ADD COLUMN new_execution_id int;
+ALTER TABLE retention_execution ADD COLUMN IF NOT EXISTS new_execution_id int;
 
 CREATE PROCEDURE PROC_UPDATE_EXECUTION_AND_RETENTION_EXECUTION ( ) BEGIN
 	DECLARE

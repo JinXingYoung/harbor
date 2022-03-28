@@ -155,9 +155,12 @@ func (c *CfgManager) Set(ctx context.Context, key string, value interface{}) {
 // GetDatabaseCfg - Get database configurations
 func (c *CfgManager) GetDatabaseCfg() *models.Database {
 	ctx := context.Background()
-	return &models.Database{
-		Type: c.Get(ctx, common.DatabaseType).GetString(),
-		PostGreSQL: &models.PostGreSQL{
+	database := &models.Database{}
+	database.Type = c.Get(ctx, common.DatabaseType).GetString()
+
+	switch database.Type {
+	case "", "postgresql":
+		postgresql := &models.PostGreSQL{
 			Host:         c.Get(ctx, common.PostGreSQLHOST).GetString(),
 			Port:         c.Get(ctx, common.PostGreSQLPort).GetInt(),
 			Username:     c.Get(ctx, common.PostGreSQLUsername).GetString(),
@@ -166,8 +169,23 @@ func (c *CfgManager) GetDatabaseCfg() *models.Database {
 			SSLMode:      c.Get(ctx, common.PostGreSQLSSLMode).GetString(),
 			MaxIdleConns: c.Get(ctx, common.PostGreSQLMaxIdleConns).GetInt(),
 			MaxOpenConns: c.Get(ctx, common.PostGreSQLMaxOpenConns).GetInt(),
-		},
+		}
+		database.PostGreSQL = postgresql
+	case "mariadb", "mysql":
+		mysql := &models.MySQL{
+			Host:         c.Get(ctx, common.MySQLHOST).GetString(),
+			Port:         c.Get(ctx, common.MySQLPort).GetInt(),
+			Username:     c.Get(ctx, common.MySQLUsername).GetString(),
+			Password:     c.Get(ctx, common.MySQLPassword).GetString(),
+			Database:     c.Get(ctx, common.MySQLDatabase).GetString(),
+			UseSSL:       c.Get(ctx, common.MySQLUseSSL).GetBool(),
+			MaxIdleConns: c.Get(ctx, common.MySQLMaxIdleConns).GetInt(),
+			MaxOpenConns: c.Get(ctx, common.MySQLMaxOpenConns).GetInt(),
+		}
+		database.MySQL = mysql
 	}
+
+	return database
 }
 
 // UpdateConfig - Update config Store with a specified configuration and also save updated configure.

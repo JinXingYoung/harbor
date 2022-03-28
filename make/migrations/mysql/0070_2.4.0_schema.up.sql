@@ -1,5 +1,5 @@
 /* cleanup deleted user project members */
-DELETE FROM project_member pm WHERE pm.entity_type = 'u' AND EXISTS (SELECT NULL FROM harbor_user u WHERE pm.entity_id = u.user_id AND u.deleted = true );
+DELETE FROM project_member WHERE project_member.entity_type = 'u' AND EXISTS (SELECT NULL FROM harbor_user WHERE project_member.entity_id = harbor_user.user_id AND harbor_user.deleted = true );
 
 ALTER TABLE replication_policy ADD COLUMN speed_kb int;
 

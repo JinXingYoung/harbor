@@ -115,11 +115,30 @@ func TestCfgManager_GetDatabaseCfg(t *testing.T) {
 		"postgresql_sslmode":  "disable",
 	})
 	dbCfg := configManager.GetDatabaseCfg()
+	assert.Equal(t, "postgresql", dbCfg.Type)
 	assert.Equal(t, "localhost", dbCfg.PostGreSQL.Host)
 	assert.Equal(t, "registry", dbCfg.PostGreSQL.Database)
 	assert.Equal(t, "root123", dbCfg.PostGreSQL.Password)
 	assert.Equal(t, "postgres", dbCfg.PostGreSQL.Username)
 	assert.Equal(t, "disable", dbCfg.PostGreSQL.SSLMode)
+}
+
+func TestCfgManager_GetDatabaseCfg_Mysql(t *testing.T) {
+	configManager.UpdateConfig(testCtx, map[string]interface{}{
+		"database_type":  "mysql",
+		"mysql_host":     "localhost",
+		"mysql_database": "registry",
+		"mysql_password": "root123",
+		"mysql_username": "postgres",
+		"mysql_port":     3306,
+	})
+	dbCfg := configManager.GetDatabaseCfg()
+	assert.Equal(t, "mysql", dbCfg.Type)
+	assert.Equal(t, "localhost", dbCfg.MySQL.Host)
+	assert.Equal(t, "registry", dbCfg.MySQL.Database)
+	assert.Equal(t, "root123", dbCfg.MySQL.Password)
+	assert.Equal(t, "postgres", dbCfg.MySQL.Username)
+	assert.Equal(t, 3306, dbCfg.MySQL.Port)
 }
 
 func TestConfigStore_Save(t *testing.T) {

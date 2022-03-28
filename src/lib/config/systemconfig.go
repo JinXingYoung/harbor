@@ -248,17 +248,33 @@ func InitialAdminPassword() (string, error) {
 func Database() (*models.Database, error) {
 	database := &models.Database{}
 	database.Type = DefaultMgr().Get(backgroundCtx, common.DatabaseType).GetString()
-	postgresql := &models.PostGreSQL{
-		Host:         DefaultMgr().Get(backgroundCtx, common.PostGreSQLHOST).GetString(),
-		Port:         DefaultMgr().Get(backgroundCtx, common.PostGreSQLPort).GetInt(),
-		Username:     DefaultMgr().Get(backgroundCtx, common.PostGreSQLUsername).GetString(),
-		Password:     DefaultMgr().Get(backgroundCtx, common.PostGreSQLPassword).GetPassword(),
-		Database:     DefaultMgr().Get(backgroundCtx, common.PostGreSQLDatabase).GetString(),
-		SSLMode:      DefaultMgr().Get(backgroundCtx, common.PostGreSQLSSLMode).GetString(),
-		MaxIdleConns: DefaultMgr().Get(backgroundCtx, common.PostGreSQLMaxIdleConns).GetInt(),
-		MaxOpenConns: DefaultMgr().Get(backgroundCtx, common.PostGreSQLMaxOpenConns).GetInt(),
+
+	switch database.Type {
+	case "", "postgresql":
+		postgresql := &models.PostGreSQL{
+			Host:         DefaultMgr().Get(backgroundCtx, common.PostGreSQLHOST).GetString(),
+			Port:         DefaultMgr().Get(backgroundCtx, common.PostGreSQLPort).GetInt(),
+			Username:     DefaultMgr().Get(backgroundCtx, common.PostGreSQLUsername).GetString(),
+			Password:     DefaultMgr().Get(backgroundCtx, common.PostGreSQLPassword).GetPassword(),
+			Database:     DefaultMgr().Get(backgroundCtx, common.PostGreSQLDatabase).GetString(),
+			SSLMode:      DefaultMgr().Get(backgroundCtx, common.PostGreSQLSSLMode).GetString(),
+			MaxIdleConns: DefaultMgr().Get(backgroundCtx, common.PostGreSQLMaxIdleConns).GetInt(),
+			MaxOpenConns: DefaultMgr().Get(backgroundCtx, common.PostGreSQLMaxOpenConns).GetInt(),
+		}
+		database.PostGreSQL = postgresql
+	case "mariadb", "mysql":
+		mysql := &models.MySQL{
+			Host:         DefaultMgr().Get(backgroundCtx, common.MySQLHOST).GetString(),
+			Port:         DefaultMgr().Get(backgroundCtx, common.MySQLPort).GetInt(),
+			Username:     DefaultMgr().Get(backgroundCtx, common.MySQLUsername).GetString(),
+			Password:     DefaultMgr().Get(backgroundCtx, common.MySQLPassword).GetString(),
+			Database:     DefaultMgr().Get(backgroundCtx, common.MySQLDatabase).GetString(),
+			UseSSL:       DefaultMgr().Get(backgroundCtx, common.MySQLUseSSL).GetBool(),
+			MaxIdleConns: DefaultMgr().Get(backgroundCtx, common.MySQLMaxIdleConns).GetInt(),
+			MaxOpenConns: DefaultMgr().Get(backgroundCtx, common.MySQLMaxOpenConns).GetInt(),
+		}
+		database.MySQL = mysql
 	}
-	database.PostGreSQL = postgresql
 
 	return database, nil
 }

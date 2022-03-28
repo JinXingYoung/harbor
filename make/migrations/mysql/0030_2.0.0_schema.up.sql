@@ -92,6 +92,7 @@ JOIN (
 ) AS ordered_art ON art.repository_name=ordered_art.repository_name AND art.digest=ordered_art.digest
 WHERE ordered_art.seq=1;
 
+ALTER TABLE artifact DROP INDEX unique_artifact;
 ALTER TABLE artifact DROP COLUMN tag;
 
 /*remove the duplicate artifact rows*/
@@ -102,7 +103,6 @@ WHERE id NOT IN (
 );
 
 SET sql_mode = '';
-ALTER TABLE artifact DROP INDEX unique_artifact;
 ALTER TABLE artifact ADD CONSTRAINT unique_artifact UNIQUE (repository_id, digest);
 
 /*set artifact size*/
@@ -127,7 +127,8 @@ CREATE TABLE artifact_reference
   annotations json,
   FOREIGN KEY (parent_id) REFERENCES artifact(id),
   FOREIGN KEY (child_id) REFERENCES artifact(id),
-  CONSTRAINT  unique_reference UNIQUE (parent_id, child_id)
+  CONSTRAINT  unique_reference UNIQUE (parent_id, child_id),
+  CHECK (annotations is null or JSON_VALID (annotations))
 );
 
 /* artifact_trash records deleted artifact */

@@ -27,6 +27,49 @@ var defaultRegistered = false
 
 // PrepareTestForMySQL is for test only.
 func PrepareTestForMySQL() {
+	dbType := os.Getenv("DATABASE_TYPE")
+	if len(dbType) == 0 {
+		log.Fatalf("environment variable DATABASE_TYPE is not set")
+	}
+	fmt.Println(dbType)
+	dbHost := os.Getenv("MYSQL_HOST")
+	if len(dbHost) == 0 {
+		log.Fatalf("environment variable MYSQL_HOST is not set")
+	}
+	dbUser := os.Getenv("MYSQL_USERNAME")
+	if len(dbUser) == 0 {
+		log.Fatalf("environment variable MYSQL_USERNAME is not set")
+	}
+	dbPortStr := os.Getenv("MYSQL_PORT")
+	if len(dbPortStr) == 0 {
+		log.Fatalf("environment variable MYSQL_PORT is not set")
+	}
+	dbPort, err := strconv.Atoi(dbPortStr)
+	if err != nil {
+		log.Fatalf("invalid POSTGRESQL_PORT: %v", err)
+	}
+
+	dbPassword := os.Getenv("MYSQL_PASSWORD")
+	dbDatabase := os.Getenv("MYSQL_DATABASE")
+	if len(dbDatabase) == 0 {
+		log.Fatalf("environment variable POSTGRESQL_DATABASE is not set")
+	}
+
+	database := &models.Database{
+		Type: "mysql",
+		MySQL: &models.MySQL{
+			Host:         dbHost,
+			Port:         dbPort,
+			Username:     dbUser,
+			Password:     dbPassword,
+			Database:     dbDatabase,
+			MaxIdleConns: 50,
+			MaxOpenConns: 100,
+		},
+	}
+
+	log.Infof("MYSQL_HOST: %s, MYSQL_USERNAME: %s, MYSQL_PORT: %d, MYSQL_PASSWORD: %s\n", dbHost, dbUser, dbPort, dbPassword)
+	initDatabaseForTest(database)
 }
 
 // PrepareTestForSQLite is for test only.

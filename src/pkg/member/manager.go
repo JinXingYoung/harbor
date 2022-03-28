@@ -16,6 +16,9 @@ package member
 
 import (
 	"context"
+
+	"github.com/astaxie/beego/orm"
+	common_dao "github.com/goharbor/harbor/src/common/dao"
 	"github.com/goharbor/harbor/src/lib/errors"
 	"github.com/goharbor/harbor/src/lib/q"
 	"github.com/goharbor/harbor/src/pkg/member/dao"
@@ -103,5 +106,15 @@ func (m *manager) DeleteMemberByUserID(ctx context.Context, uid int) error {
 
 // NewManager ...
 func NewManager() Manager {
+
+	dbType := common_dao.GetOrmer().Driver().Type()
+
+	switch dbType {
+	case orm.DRPostgres:
+		return &manager{dao: dao.New()}
+	case orm.DRMySQL:
+		return &manager{dao: dao.NewMysqlDao()}
+	}
+
 	return &manager{dao: dao.New()}
 }
